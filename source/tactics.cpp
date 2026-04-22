@@ -29,9 +29,12 @@ void Tactics::brainrot(Player& p,long long calling){
     else p.call(0);
 }
 
-void Tactics::choiantoan(Player& p,long long calling) {
-    if (p.bet_amount+calling>2000) p.fold();
-    else p.call(calling);
+void Tactics::choiantoan(Player& p, long long calling) {
+    if (p.bet_amount + calling > p.chip / 2) {
+        p.fold();
+    } else {
+        p.call(calling);
+    }
 }
 
 void Tactics::choiconao(Player& p,long long calling,const vector<Card>& board){
