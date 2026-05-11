@@ -3,10 +3,12 @@
 Player::Player(string n, long long c, AIType ai) {
     name = n;
     chip = c;
+    init_chip = c;  // Lưu chip ban đầu
     ai_type = ai;
     bet_amount = 0;
     active = true;
     wins = 0;
+    chip_won = 0;
 }
 
 void Player::fold() {
@@ -14,12 +16,10 @@ void Player::fold() {
     cout << "   -> [" << name << "] FOLD.\n";
 }
 
-// Thêm hàm check()
 void Player::check() {
     cout << "   -> [" << name << "] CHECK.\n";
 }
 
-// Cập nhật lại hàm call()
 void Player::call(long long amount) {
     long long actual_call = min(chip, amount);
     chip -= actual_call;
