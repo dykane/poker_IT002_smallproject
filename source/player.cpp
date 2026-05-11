@@ -1,39 +1,52 @@
 #include "poker.h"
 
-Player::Player(int _id,long long initial_chip){
-    id=_id;
-    chip=initial_chip;
-    bet_amount=0;
-    active=true;
-    is_all_in=false;
+Player::Player(string n, long long c, AIType ai) {
+    name = n;
+    chip = c;
+    ai_type = ai;
+    bet_amount = 0;
+    active = true;
+    wins = 0;
 }
-void Player::reset_for_new_hand(){
-    hand.clear();
-    bet_amount=0;
-    if(chip>0)active=true;
-    else active=false;
-    is_all_in=(chip==0);
+
+void Player::fold() {
+    active = false;
+    cout << "   -> [" << name << "] FOLD.\n";
 }
-void Player::fold(){
-    active=false;
+
+// Thêm hàm check()
+void Player::check() {
+    cout << "   -> [" << name << "] CHECK.\n";
 }
-void Player::call(long long amount){
-    long long callin=min(chip,amount);
-    chip-=callin;
-    bet_amount+=callin;
-    if (chip==0) is_all_in = true;
+
+// Cập nhật lại hàm call()
+void Player::call(long long amount) {
+    long long actual_call = min(chip, amount);
+    chip -= actual_call;
+    bet_amount += actual_call;
+    cout << "   -> [" << name << "] CALL " << actual_call << " chips. (Remaining: " << chip << ")\n";
 }
-void Player::raise(long long calling,long long raise_amount){
-    long long total=calling+raise_amount;
-    if(total>=chip){
+
+void Player::raise(long long to_call, long long raise_amount) {
+    long long total_needed = to_call + raise_amount;
+    if (chip <= total_needed) {
         all_in();
-    } else{
-        chip-=total;
-        bet_amount+=total;
+        return;
     }
+    chip -= total_needed;
+    bet_amount += total_needed;
+    cout << "   -> [" << name << "] RAISE " << raise_amount << " (Total added: " << total_needed << ", Remaining: " << chip << ")\n";
 }
-void Player::all_in(){
-    bet_amount+=chip;
-    chip=0;
-    is_all_in=true;
+
+void Player::all_in() {
+    cout << "   -> [" << name << "] ALL-IN with " << chip << " chips!\n";
+    bet_amount += chip;
+    chip = 0;
+}
+
+void Player::resetForNewRound() {
+    hand.clear();
+    bet_amount = 0;
+    if (chip > 0) active = true;
+    else active = false; // Loại nếu hết tiền
 }
