@@ -1,121 +1,109 @@
 #include "poker.h"
 
-mt19937 Tactics::rng(time(0));
-bool Tactics::check_consecutive(vector<Card>cards,int req){
-    if(cards.size()<req) return false;
-    sort(cards.begin(),cards.end());
-    int max_consec=1,current=1;
-    for(size_t i=1;i<cards.size();i++) {
-        if(cards[i].rank==cards[i-1].rank) continue;
-        if(cards[i].rank==cards[i-1].rank+1){
-            current++;
-            max_consec=max(max_consec,current);
-        } else {
-            current=1;
-        }
+// Hàm estimateWinRate giữ nguyên như cũ
+double Tactics::estimateWinRate(const vector<Card>& hand, const vector<Card>& board) {
+    int wins = 0;
+    int simulations = 100;
+
+    for (int i = 0; i < simulations; ++i) {
+        Deck sim_deck;
+        vector<Card> known = hand;
+        known.insert(known.end(), board.begin(), board.end());
+        sim_deck.removeKnown(known);
+        sim_deck.shuffle();
+
+        vector<Card> sim_board = board;
+        while (sim_board.size() < 5) sim_board.push_back(sim_deck.draw());
+
+        vector<Card> opp_hand = {sim_deck.draw(), sim_deck.draw()};
+
+        HandResult my_res = HandEvaluator::evaluate(hand, sim_board);
+        HandResult opp_res = HandEvaluator::evaluate(opp_hand, sim_board);
+
+        if (!(my_res < opp_res)) wins++;
     }
-    return max_consec>=req;
-}
-bool Tactics::check_suited(vector<Card> cards,int req) {
-    map<char,int> m;
-    for(Card c:cards){
-        m[c.suit]++;
-        if(m[c.suit]>=req) return true;
-    }
-    return false;
-}
-void Tactics::brainrot(Player& p,long long calling){
-    if(calling>0) p.call(calling);
-    else p.call(0);
+    return (double)wins / simulations;
 }
 
-void Tactics::choiantoan(Player& p, long long calling) {
-    if (p.bet_amount + calling > p.chip / 2) {
-        p.fold();
+void Tactics::decide(Player& p, Game& game, long long to_call, long long highest_bet) {
+    if (p.chip == 0) return; // All-in rồi không làm gì
+
+    if (p.ai_type == BRAINROT) decide_brainrot(p, to_call, highest_bet);
+    else if (p.ai_type == CHOICONAO) decide_choiconao(p, game.board, to_call, highest_bet);
+    else if (p.ai_type == CHOIANTOAN) decide_choiantoan(p, game.board, to_call, highest_bet);
+}
+
+void Tactics::decide_brainrot(Player& p, long long to_call, long long highest_bet) {
+    if (to_call == 0) {
+        p.check(); // Đổi call(0) thành check()
     } else {
-        p.call(calling);
+        if (p.chip > to_call + 10 && rand() % 3 == 0) p.raise(to_call, 10);
+        else p.call(to_call); // Call mất tiền
     }
 }
 
-void Tactics::execute(Player& p, int strategy_type, long long to_call, const vector<Card>& board) {
-    if (p.is_all_in || !p.active) return;
+void Tactics::decide_choiconao(Player& p, const vector<Card>& board, long long to_call, long long highest_bet) {
+    // PREFLOP
+    if (board.empty()) {
+        int r1 = p.hand[0].rank, r2 = p.hand[1].rank;
+        bool is_pair = (r1 == r2);
+        bool is_high = (r1 >= 10 && r2 >= 10);
+        bool is_suited = (p.hand[0].suit == p.hand[1].suit);
 
-    if (strategy_type == 1) brainrot(p, to_call); // Player 1, 2
-    else if (strategy_type == 2) choiantoan(p, to_call); // Player 3, 4
-    else choiconao(p, to_call, board); // Player 5
-}
-void Tactics::choiconao(Player& p, long long to_call, const vector<Card>& board) {
-    vector<Card> all_cards = p.hand;
-    all_cards.insert(all_cards.end(), board.begin(), board.end());
-    int j = all_cards.size();
-
-    auto rand_pct = []() { return uniform_int_distribution<int>(1, 100)(rng); };
-
-    if (j == 2) {
-        //preflop
-        vector<Card> h = p.hand;
-        sort(h.begin(), h.end()); // h[0] <= h[1]
-        int rank1 = h[0].rank;
-        int rank2 = h[1].rank;
-        bool suited = (h[0].suit == h[1].suit);
-        bool is_pair = (rank1 == rank2);
-
-        if (is_pair) {
-            if (rank2 >= 10) p.raise(to_call, 200); // Đôi lớn (10, J, Q, K, A) -> Tố mạnh
-            else p.call(to_call); // Đôi nhỏ -> Theo để chờ set Xám cô
+        if (is_pair || is_high) {
+            if (to_call == 0 || to_call <= 50) p.raise(to_call, 50);
+            else p.call(to_call);
+        } else if (r1 >= 13 || r2 >= 13 || is_suited) {
+            if (to_call > p.chip / 10) p.fold();
+            else {
+                if (to_call == 0) p.check();
+                else p.call(to_call);
+            }
+        } else {
+            if (to_call > 0) p.fold();
+            else p.check(); // Đổi call(0) thành check()
         }
-        else if (rank2 >= 13 && rank1 >= 10) {
-            // Bài siêu cấp (AK, AQ, KQ) -> Tố thêm
-            p.raise(to_call, 150);
-        }
-        else if (rank2 >= 11 || (suited && rank2 - rank1 <= 4)) {
-            // Bài khá (Có J, Q, K, A hoặc đồng chất liên tiếp) -> Theo bài
-            p.call(to_call);
-        }
-        else {
-            // Rác -> Bỏ (Trừ khi không ai cược thêm thì check)
-            if (to_call == 0) p.call(0);
-            else p.fold();
-        }
+        return;
     }
-    else {
-        //flob turn river
-        // Dịch ngược 20 bit để lấy lại chỉ số cấp độ bài (1 đến 9) cho AI dễ tính toán
-        int str = HandEvaluator::evaluate(all_cards) >> 20;
-        bool draw_flush = check_suited(all_cards, 4);
-        bool draw_straight = check_consecutive(all_cards, 4);
 
-        if (str >= 4) {
-            // Rất mạnh (Trips, Sảnh, Thùng, Cù lũ, Tứ quý)
-            if (rand_pct() <= 30 && j < 7) {
-                p.call(to_call); // 30% cơ hội Núp lùm (Slowplay) dụ địch cược thêm
-            } else {
-                p.raise(to_call, 300); // 70% cơ hội Tố mạnh lấy tiền
-            }
-        }
-        else if (str == 3) {
-            // Khá mạnh (2 Đôi)
-            p.raise(to_call, 100); // Tố nhẹ để ép các bài yếu hơn
-        }
-        else if (str == 2) {
-            // Trung bình (1 Đôi)
-            if (to_call > 600) {
-                p.fold(); // Nếu đối thủ cược quá gắt (>600 chip), biết sợ và bỏ bài
-            } else {
-                p.call(to_call); // Cược nhỏ thì theo
-            }
-        }
+    // POSTFLOP
+    double win_rate = estimateWinRate(p.hand, board);
+    HandResult current_power = HandEvaluator::evaluate(p.hand, board);
+
+    if (current_power.rank >= THREE_OF_A_KIND || win_rate > 0.7) {
+        if (rand() % 3 == 0) {
+            if (to_call == 0) p.check(); else p.call(to_call);
+        } else p.raise(to_call, highest_bet > 0 ? highest_bet : 100);
+        return;
+    }
+
+    if (win_rate > 0.4) {
+        if (to_call > p.chip / 4) p.fold();
         else {
-            // Bài yếu (Mậu thầu - High card)
-            if (j < 7 && (draw_flush || draw_straight)) {
-                // Đang chờ Sảnh hoặc Thùng
-                if (to_call <= 300) p.call(to_call); // Giá rẻ thì mua bài
-                else p.fold(); // Đắt quá thì bỏ
-            } else {
-                // Không có đường phát triển
-                if (to_call == 0) p.call(0); // Check nếu miễn phí
-                else p.fold(); // Có cược là chạy
-            }
+            if (to_call == 0) p.check();
+            else p.call(to_call);
         }
+        return;
+    }
+
+    if (to_call == 0) p.check(); // Đổi call(0) thành check()
+    else p.fold();
+}
+
+void Tactics::decide_choiantoan(Player& p, const vector<Card>& board, long long to_call, long long highest_bet) {
+    long long limit = p.chip / 2;
+    if (to_call > limit) {
+        p.fold();
+        return;
+    }
+
+    double win_rate = estimateWinRate(p.hand, board);
+    if (win_rate > 0.75 && limit > to_call) {
+        long long safe_raise = min((long long)50, limit - to_call);
+        if (safe_raise > 0) p.raise(to_call, safe_raise);
+        else p.call(to_call);
+    } else {
+        if (to_call == 0) p.check(); // Đổi call(0) thành check()
+        else p.call(to_call);
     }
 }
