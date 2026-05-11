@@ -92,18 +92,37 @@ void Tactics::decide_choiconao(Player& p, const vector<Card>& board, long long t
 
 void Tactics::decide_choiantoan(Player& p, const vector<Card>& board, long long to_call, long long highest_bet) {
     long long limit = p.chip / 2;
+
     if (to_call > limit) {
         p.fold();
         return;
     }
 
     double win_rate = estimateWinRate(p.hand, board);
+
+    // --- LOGIC MỚI: Khi win rate > 85% (0.85) ---
+    if (win_rate > 0.85) {
+        // Raise nhẹ dưới hoặc bằng 70% số tiền của nó
+        long long safe_raise = (p.chip * 70) / 100;  // 70% chip hiện tại
+        long long actual_raise = min(safe_raise, p.chip - to_call);
+
+        if (actual_raise > 0 && p.chip > to_call + actual_raise) {
+            p.raise(to_call, actual_raise);
+        } else {
+            // Nếu không đủ để raise an toàn, thì call
+            if (to_call == 0) p.check();
+            else p.call(to_call);
+        }
+        return;
+    }
+
+    // Logic cũ: Khi win rate > 75%
     if (win_rate > 0.75 && limit > to_call) {
         long long safe_raise = min((long long)50, limit - to_call);
         if (safe_raise > 0) p.raise(to_call, safe_raise);
         else p.call(to_call);
     } else {
-        if (to_call == 0) p.check(); // Đổi call(0) thành check()
+        if (to_call == 0) p.check();
         else p.call(to_call);
     }
 }
