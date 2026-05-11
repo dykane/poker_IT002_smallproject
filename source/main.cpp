@@ -4,19 +4,23 @@ int main() {
     srand(time(0));
 
     int num_players, num_games;
-    long long init_chips;
 
     cout << "So luong nguoi choi (2-10): ";
     cin >> num_players;
     num_players = max(2, min(10, num_players));
 
-    cout << "So chip ban dau: ";
-    cin >> init_chips;
+    // --- NHẬP SỐ CHIP CHO TỪNG NGƯỜI CHƠI ---
+    vector<long long> init_chips(num_players);
+    cout << "\n--- NHAP SO CHIP BAN DAU CHO TUNG NGUOI CHOI ---\n";
+    for (int i = 0; i < num_players; ++i) {
+        cout << "Nhap so chip cho Player_" << i << ": ";
+        cin >> init_chips[i];
+        if (init_chips[i] < 10) init_chips[i] = 10; // Tối thiểu 10 chip
+    }
+    cout << "------------------------------------------------------\n";
 
     cout << "So van choi (n): ";
     cin >> num_games;
-
-    // Đã xóa phần hỏi target_player ở đây
 
     vector<AIType> player_tactics;
     cout << "\n--- CHON CHIEN THUAT (TACTICS) CHO TUNG NGUOI CHOI ---\n";
@@ -35,7 +39,6 @@ int main() {
     }
     cout << "------------------------------------------------------\n";
 
-    // Cập nhật lời gọi constructor (chỉ còn 3 tham số)
     Game poker(num_players, init_chips, player_tactics);
     poker.playGames(num_games);
 
