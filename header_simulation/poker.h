@@ -5,83 +5,136 @@
 
 using namespace std;
 
-// 1. Card
-class Card {
-public:
-    int rank;
-    char suit;
-    Card(int r, char s);
-    bool operator<(const Card& other) const;
+// --- Enums ---
+enum HandRankEnum {
+    HIGH_CARD, PAIR, TWO_PAIRS, THREE_OF_A_KIND, STRAIGHT, FLUSH,
+    FULL_HOUSE, FOUR_OF_A_KIND, STRAIGHT_FLUSH, ROYAL_FLUSH
 };
 
-// 2. Deck
+enum AIType { BRAINROT, CHOICONAO, CHOIANTOAN };
+
+// --- Structs ---
+struct Card {
+    int rank; // 2-14 (14 là Át)
+    char suit; // 'H', 'D', 'C', 'S' (Cơ, Rô, Chuồn, Bích)
+
+    bool operator<(const Card& other) const {
+        return rank < other.rank;
+    }
+    bool operator==(const Card& other) const {
+        return rank == other.rank && suit == other.suit;
+    }
+    string toString() const;
+};
+
+struct HandResult {
+    HandRankEnum rank;
+    vector<int> tie_breakers; // Dùng để so sánh bài bằng nhau (VD: kicker)
+
+    bool operator<(const HandResult& other) const {
+        if (rank != other.rank) return rank < other.rank;
+        for (size_t i = 0; i < tie_breakers.size(); ++i) {
+            if (i >= other.tie_breakers.size()) return false;
+            if (tie_breakers[i] != other.tie_breakers[i])
+                return tie_breakers[i] < other.tie_breakers[i];
+        }
+        return false;
+    }
+};
+
+// --- Forward Declarations ---
+class Game;
+class Player;
+
+// --- Classes ---
 class Deck {
 private:
     vector<Card> cards;
+    mt19937 rng;
 public:
     Deck();
-    void shuffle_deck();
+    void shuffle();
     Card draw();
+    void removeKnown(const vector<Card>& known_cards); // Hỗ trợ Monte Carlo
 };
 
-// 3. Player
 class Player {
 public:
-    int id;
+    string name;
     vector<Card> hand;
     long long chip;
+    long long init_chip;  // Lưu chip ban đầu
     long long bet_amount;
     bool active;
-    bool is_all_in;
-    Player(int _id, long long initial_chip);
-    void reset_for_new_hand();
+    AIType ai_type;
+    int wins;
+    long long chip_won;
+
+    Player(string n, long long c, AIType ai);
+
     void fold();
+    void check();
     void call(long long amount);
-    void raise(long long calling, long long raise_amount);
+    void raise(long long to_call, long long raise_amount);
     void all_in();
+    void resetForNewRound();
 };
 
-// 5. HandEvaluator
 class HandEvaluator {
 public:
-    static int evaluate(vector<Card> cards);
+    static HandResult evaluate(const vector<Card>& hand, const vector<Card>& board);
 };
-// 4. Tactics (AI)
+
 class Tactics {
 public:
-    static mt19937 rng;
-    static void execute(Player& p, int strategy_type, long long to_call, const vector<Card>& board);
+    static double estimateWinRate(const vector<Card>& hand, const vector<Card>& board);
+    static void decide(Player& p, Game& game, long long to_call, long long highest_bet);
 private:
-    static void brainrot(Player& p, long long to_call);
-    static void choiantoan(Player& p, long long to_call);
-    static void choiconao(Player& p, long long to_call, const vector<Card>& board);
-    static bool check_consecutive(vector<Card> cards, int req);
-    static bool check_suited(vector<Card> cards, int req);
+    static void decide_brainrot(Player& p, long long to_call, long long highest_bet);
+    static void decide_choiconao(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
+    static void decide_choiantoan(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
 };
-// 6. BettingRound
-class BettingRound {
-public:
-    static void play(vector<Player>& players, vector<Card>& board, long long& pot);
-};
-// 7. Pot
+
 class Pot {
 public:
-    long long total;
-    Pot();
-    void collect_bets(vector<Player>& players);
-    void reset();
+    long long total_money;
+    Pot() : total_money(0) {}
+    void collect(long long amount);
+    void clear();
 };
-// 8. Game
-class Game {
-private:
-    vector<Player> players;
-    Deck deck;
-    vector<Card> board;
-    Pot pot;
+
+class BettingRound {
 public:
-    Game();
-    void play_game(int num_games);
-    void play_hand();
-    void determine_winners(vector<Player*>& active_players);
+    static void playRound(Game& game);
+};
+
+class Statistics {
+public:
+    static void exportToCSV(const vector<Player>& players, int num_games);
+};
+
+class Game {
+public:
+    vector<Player> players;
+    vector<Card> board;
+    Deck deck;
+    Pot pot;
+    int dealer_idx;
+    int num_games;
+    int current_game;
+    long long highest_bet;
+    long long current_blind;
+
+    Game(int p_count, const vector<long long>& init_chips, const vector<AIType>& ai_types);
+
+    void playGames(int n_games);
+    void initSingleGame();
+    void dealPreflop();
+    void dealFlop();
+    void dealTurn();
+    void dealRiver();
+    void showdown();
+    int countActivePlayers();
+    vector<int> getActivePlayers();
 };
 #endif // POKER_H_INCLUDED
