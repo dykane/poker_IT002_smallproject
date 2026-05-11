@@ -146,7 +146,7 @@ void Game::playGames(int n_games) {
     // In Header của bảng
     cout << left << setw(15) << "Nguoi choi"
          << " | " << setw(12) << "So van thang"
-         << " | " << "So do chip (Moi '=' la 100 chip)\n";
+         << " | " << "So do chip \n";
     cout << "--------------------------------------------------------------\n";
 
     // In dữ liệu từng người chơi
@@ -154,7 +154,7 @@ void Game::playGames(int n_games) {
         cout << left << setw(15) << p.name
              << " | " << setw(12) << p.wins
              << " | ";
-        cout << " (" << p.chip << ")\n";
+        cout << p.chip <<"\n";
     }
     cout << "==============================================================\n";
 }
