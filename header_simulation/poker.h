@@ -90,11 +90,10 @@ public:
     static double estimateWinRate(const vector<Card>& hand, const vector<Card>& board);
     static void decide(Player& p, Game& game, long long to_call, long long highest_bet);
 private:
-    static void decide_brainrot(Player& p, long long to_call, long long highest_bet);
+    static void decide_brainrot(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
     static void decide_choiconao(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
     static void decide_choiantoan(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
 };
-
 class Pot {
 public:
     long long total_money;
@@ -110,6 +109,7 @@ public:
 
 class Statistics {
 public:
+    static void recordRound(const vector<Player>& players);
     static void exportToCSV(const vector<Player>& players, int num_games);
 };
 
