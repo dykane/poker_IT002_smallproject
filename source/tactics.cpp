@@ -28,17 +28,83 @@ double Tactics::estimateWinRate(const vector<Card>& hand, const vector<Card>& bo
 void Tactics::decide(Player& p, Game& game, long long to_call, long long highest_bet) {
     if (p.chip == 0) return; // All-in rồi không làm gì
 
-    if (p.ai_type == BRAINROT) decide_brainrot(p, to_call, highest_bet);
+    if (p.ai_type == BRAINROT) decide_brainrot(p, game.board, to_call, highest_bet);
     else if (p.ai_type == CHOICONAO) decide_choiconao(p, game.board, to_call, highest_bet);
     else if (p.ai_type == CHOIANTOAN) decide_choiantoan(p, game.board, to_call, highest_bet);
 }
 
-void Tactics::decide_brainrot(Player& p, long long to_call, long long highest_bet) {
+void Tactics::decide_brainrot(Player& p, const vector<Card>& board, long long to_call, long long highest_bet) {
+    // PREFLOP
+    if (board.empty()) {
+        if (to_call == 0) {
+            p.check();
+        } else {
+            // Preflop: random call hoặc raise
+            if (p.chip > to_call + 10 && rand() % 3 == 0) {
+                p.raise(to_call, 10);
+            } else {
+                p.call(to_call);
+            }
+        }
+        return;
+    }
+
+    // POSTFLOP - Logic mới cho BRAINROT
+    double win_rate = estimateWinRate(p.hand, board);
+
+    // --- Win rate > 80%: Raise mạnh ---
+    if (win_rate > 0.80) {
+        long long strong_raise = highest_bet > 0 ? highest_bet * 2 : 200;
+
+        if (p.chip > to_call + strong_raise) {
+            p.raise(to_call, strong_raise);
+        } else if (p.chip > to_call) {
+            // Nếu không đủ raise mạnh, thì all-in
+            p.all_in();
+        } else {
+            // Nếu vừa đủ to_call, call
+            p.call(to_call);
+        }
+        return;
+    }
+
+    // --- Win rate 65%-80%: Raise nhẹ ---
+    if (win_rate > 0.65) {
+        long long light_raise = highest_bet > 0 ? highest_bet / 2 : 50;
+
+        if (p.chip > to_call + light_raise) {
+            p.raise(to_call, light_raise);
+        } else {
+            p.call(to_call);
+        }
+        return;
+    }
+
+    // --- Win rate 70% trở lên: All-in khi có bot khác bet ---
+    if (win_rate > 0.70) {
+        if (to_call > 0) {
+            // Có bot khác đã bet
+            if (p.chip > to_call) {
+                p.all_in();
+            } else {
+                p.call(to_call);
+            }
+        } else {
+            // Không ai bet, check
+            p.check();
+        }
+        return;
+    }
+
+    // --- Win rate < 70%: Call hoặc Check ---
     if (to_call == 0) {
-        p.check(); // Đổi call(0) thành check()
+        p.check();
+    } else if (to_call <= p.chip / 5) {
+        // Nếu to_call nhỏ (dưới 20% chip), call
+        p.call(to_call);
     } else {
-        if (p.chip > to_call + 10 && rand() % 3 == 0) p.raise(to_call, 10);
-        else p.call(to_call); // Call mất tiền
+        // Nếu to_call quá lớn, fold
+        p.fold();
     }
 }
 
@@ -61,7 +127,7 @@ void Tactics::decide_choiconao(Player& p, const vector<Card>& board, long long t
             }
         } else {
             if (to_call > 0) p.fold();
-            else p.check(); // Đổi call(0) thành check()
+            else p.check();
         }
         return;
     }
@@ -86,7 +152,7 @@ void Tactics::decide_choiconao(Player& p, const vector<Card>& board, long long t
         return;
     }
 
-    if (to_call == 0) p.check(); // Đổi call(0) thành check()
+    if (to_call == 0) p.check();
     else p.fold();
 }
 
