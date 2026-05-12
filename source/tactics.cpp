@@ -3,7 +3,7 @@
 // Hàm estimateWinRate giữ nguyên như cũ
 double Tactics::estimateWinRate(const vector<Card>& hand, const vector<Card>& board) {
     int wins = 0;
-    int simulations = 100;
+    int simulations = 40;
 
     for (int i = 0; i < simulations; ++i) {
         Deck sim_deck;
