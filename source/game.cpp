@@ -120,7 +120,6 @@ void Game::showdown() {
     players[best_player].chip_won += pot.total_money;
     players[best_player].wins++;
 }
-
 void Game::playGames(int n_games) {
     num_games = n_games;
     for (current_game = 0; current_game < num_games; ++current_game) {
@@ -133,10 +132,9 @@ void Game::playGames(int n_games) {
 
         showdown();
 
+        Statistics::recordRound(players);  // Lưu lịch sử chi
         dealer_idx = (dealer_idx + 1) % players.size();
     }
-
-    // --- PHẦN THỐNG KÊ MỚI ---
     cout << "\n==============================================================\n";
     cout << "                 THONG KE SAU " << num_games << " VAN\n";
     cout << "==============================================================\n";
@@ -166,6 +164,6 @@ void Game::playGames(int n_games) {
     cout << "TONG CHIP: " << total_pot << "\n";
     cout << "==============================================================\n";
 
-    // Xuất ra file CSV
+    // Phần thống kê và xuất file...
     Statistics::exportToCSV(players, num_games);
 }
