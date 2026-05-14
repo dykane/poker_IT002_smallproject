@@ -1,8 +1,10 @@
 #ifndef POKER_H_INCLUDED
 #define POKER_H_INCLUDED
 
-#include <bits/stdc++.h>
-
+#include <vector>
+#include <string>
+#include <random>
+#include <cstddef>
 using namespace std;
 
 // --- Enums ---
@@ -13,31 +15,39 @@ enum HandRankEnum {
 
 enum AIType { BRAINROT, CHOICONAO, CHOIANTOAN };
 
+// --- Helper ---
+string aiTypeToString(AIType type);
+
 // --- Structs ---
 struct Card {
-    int rank; // 2-14 (14 là Át)
-    char suit; // 'H', 'D', 'C', 'S' (Cơ, Rô, Chuồn, Bích)
+    int rank;
+    char suit;
 
     bool operator<(const Card& other) const {
         return rank < other.rank;
     }
+
     bool operator==(const Card& other) const {
         return rank == other.rank && suit == other.suit;
     }
+
     string toString() const;
 };
 
 struct HandResult {
     HandRankEnum rank;
-    vector<int> tie_breakers; // Dùng để so sánh bài bằng nhau (VD: kicker)
+    vector<int> tie_breakers;
 
     bool operator<(const HandResult& other) const {
         if (rank != other.rank) return rank < other.rank;
+
         for (size_t i = 0; i < tie_breakers.size(); ++i) {
             if (i >= other.tie_breakers.size()) return false;
-            if (tie_breakers[i] != other.tie_breakers[i])
+            if (tie_breakers[i] != other.tie_breakers[i]) {
                 return tie_breakers[i] < other.tie_breakers[i];
+            }
         }
+
         return false;
     }
 };
@@ -51,11 +61,12 @@ class Deck {
 private:
     vector<Card> cards;
     mt19937 rng;
+
 public:
     Deck();
     void shuffle();
     Card draw();
-    void removeKnown(const vector<Card>& known_cards); // Hỗ trợ Monte Carlo
+    void removeKnown(const vector<Card>& known_cards);
 };
 
 class Player {
@@ -63,12 +74,17 @@ public:
     string name;
     vector<Card> hand;
     long long chip;
-    long long init_chip;  // Lưu chip ban đầu
+    long long init_chip;
     long long bet_amount;
     bool active;
     AIType ai_type;
     int wins;
     long long chip_won;
+
+    // --- New statistics fields ---
+    int hands_played;
+    int bust_hand;
+    bool busted;
 
     Player(string n, long long c, AIType ai);
 
@@ -89,14 +105,17 @@ class Tactics {
 public:
     static double estimateWinRate(const vector<Card>& hand, const vector<Card>& board);
     static void decide(Player& p, Game& game, long long to_call, long long highest_bet);
+
 private:
     static void decide_brainrot(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
     static void decide_choiconao(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
     static void decide_choiantoan(Player& p, const vector<Card>& board, long long to_call, long long highest_bet);
 };
+
 class Pot {
 public:
     long long total_money;
+
     Pot() : total_money(0) {}
     void collect(long long amount);
     void clear();
@@ -110,7 +129,7 @@ public:
 class Statistics {
 public:
     static void recordRound(const vector<Player>& players);
-    static void exportToCSV(const vector<Player>& players, int num_games);
+    static void exportToCSV(const vector<Player>& players, int actual_games, int max_games);
 };
 
 class Game {
@@ -134,7 +153,14 @@ public:
     void dealTurn();
     void dealRiver();
     void showdown();
+
     int countActivePlayers();
+    int countPlayersWithChips();
+    int getFinalWinnerIndex();
+    int getNextPlayerWithChips(int start_idx);
     vector<int> getActivePlayers();
+    void updateBustStatus();
+    void printFinalStatistics(int actual_games, int max_games);
 };
+
 #endif // POKER_H_INCLUDED

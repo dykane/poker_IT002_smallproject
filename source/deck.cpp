@@ -1,4 +1,5 @@
 #include "poker.h"
+#include<iostream>
 
 Deck::Deck() {
     random_device rd;

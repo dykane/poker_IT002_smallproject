@@ -1,5 +1,5 @@
 #include "poker.h"
-
+#include<iostream>
 void BettingRound::playRound(Game& game) {
     int active_count = game.countActivePlayers();
     if (active_count <= 1) return; // Không cần bet nếu chỉ còn 1 người

@@ -1,5 +1,6 @@
 #include "poker.h"
-
+#include<iostream>
+#include <map>
 HandResult HandEvaluator::evaluate(const vector<Card>& hand, const vector<Card>& board) {
     vector<Card> all_cards = hand;
     all_cards.insert(all_cards.end(), board.begin(), board.end());

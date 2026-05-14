@@ -1,4 +1,5 @@
 #include "poker.h"
+#include<iostream>
 
 string Card::toString() const {
     string r = "";

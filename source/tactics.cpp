@@ -1,5 +1,5 @@
 #include "poker.h"
-
+#include <iostream>
 // Hàm estimateWinRate giữ nguyên như cũ
 double Tactics::estimateWinRate(const vector<Card>& hand, const vector<Card>& board) {
     int wins = 0;

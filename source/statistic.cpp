@@ -1,7 +1,10 @@
 #include "poker.h"
 #include <fstream>
+#include <iostream>
+#include <iomanip>
+using namespace std;
 
-void Statistics::exportToCSV(const vector<Player>& players, int num_games) {
+void Statistics::exportToCSV(const vector<Player>& players, int actual_games, int max_games) {
     ofstream file("poker_statistics.csv");
 
     if (!file.is_open()) {
@@ -9,38 +12,50 @@ void Statistics::exportToCSV(const vector<Player>& players, int num_games) {
         return;
     }
 
-    // Ghi header
-    file << "Nguoi Choi,So Van Thang,Chip Ban Dau,Chip Hien Tai,Chip Thang,Chip Thua,Thay Doi\n";
+    file << "Max Hands,Actual Hands\n";
+    file << max_games << "," << actual_games << "\n\n";
+
+    file << "Nguoi Choi,Strategy,Hands Played,Wins,Hand Winrate (%),Chip Ban Dau,Chip Hien Tai,Profit,Chip Thang,Bust Hand,Status\n";
 
     long long total_initial = 0;
     long long total_final = 0;
 
-    // Ghi dữ liệu từng người chơi
     for (const auto& p : players) {
-        long long chip_loss = p.init_chip - p.chip;
-        long long change = p.chip - p.init_chip;
+        double hand_wr = 0.0;
+
+        if (p.hands_played > 0) {
+            hand_wr = (double)p.wins * 100.0 / p.hands_played;
+        }
+
+        long long profit = p.chip - p.init_chip;
 
         file << p.name << ","
+             << aiTypeToString(p.ai_type) << ","
+             << p.hands_played << ","
              << p.wins << ","
+             << fixed << setprecision(2) << hand_wr << ","
              << p.init_chip << ","
              << p.chip << ","
-             << p.chip_won << ","
-             << chip_loss << ","
-             << change << "\n";
+             << profit << ","
+             << p.chip_won << ",";
+
+        if (p.busted) {
+            file << p.bust_hand << ",BUSTED\n";
+        } else {
+            file << "SURVIVED,ALIVE\n";
+        }
 
         total_initial += p.init_chip;
         total_final += p.chip;
     }
 
-    // Tổng cộng
-    file << "TONG CONG,"
-         << ","
+    file << "\nTONG CONG,,,,,"
          << total_initial << ","
          << total_final << ","
-         << ","
-         << ","
-         << (total_final - total_initial) << "\n";
+         << (total_final - total_initial)
+         << ",,,\n";
 
     file.close();
-    cout << "\n Thong ke da duoc xuat ra file: poker_statistics.csv\n";
+
+    cout << "\nThong ke da duoc xuat ra file: poker_statistics.csv\n";
 }
